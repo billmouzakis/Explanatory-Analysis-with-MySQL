@@ -1,18 +1,19 @@
--- We will use the data from this url: 
--- Ας πάρουμε μια ιδέα για το πως είναι τα δεδομένα
+-- We will use the data from the file  layoffs.csv
+
+-- Let's see our data
 
 SELECT *
 FROM layoffs;
 
--- Το πρώτο βήμα είναι να απομακρύνουμε τις διπλο εμφανιζόμενες τιμές.
+-- The first step is to remove the duplicates
 
--- Δεύτερο βήμα: Standardize the data (δηλαδή αν έχουμε spelling errors να τα φτιάξουμε κλπ)
+-- The second step is to standardize the data (correct spelling errors etc.)
 
--- Τρίτο βήμα: Null values or Blank values
+-- The third step is to handle null or blank values
 
--- Τέταρτο βήμα: Remove unnecessary columns
+-- The fourth step is to remove unnecessary columns
 
--- Για αρχή είναι καλό να αντιγράψουμε τα δεδομένα σε έναν άλλο πίνακα με σκοπό αν κάπου κάνουμε λάθος να έχουμε την αρχική μορφή των δεδομένων.
+-- First of all, it is very helpful to copy the data into another table so that if we do a mistake we can have a back up of the original data
 
 CREATE TABLE layoffs_staging
 LIKE layoffs;
@@ -21,7 +22,7 @@ INSERT layoffs_staging
 SELECT *
 FROM layoffs;
 
--- Πάμε να δούμε αν υπάρχουν διπλοεμφανιζόμενες τιμές
+-- Let's see the duplicate values
 
 SELECT *,
 ROW_NUMBER() OVER(
@@ -29,9 +30,9 @@ PARTITION BY company, location, industry, total_laid_off, `date` #βάζουμε
 ) AS row_num
 FROM layoffs_staging;
 
--- Οι διπλοεμφανιζόμενες τιμές είναι αυτές που έχουν row_num μεγαλύτερο από 1
+-- Duplicate values have row_num greater than 1
 
--- Θα φτιάξουμε ένα CTE με σκοπό να διώξουμε τις διπλοεμφανιζόμενες
+-- We will create a CTE in order to remove duplicate values
 
 WITH duplicate_CTE AS(
 
@@ -46,13 +47,13 @@ SELECT *
 FROM duplicate_CTE
 WHERE row_num > 1;
 
--- Πάμε να δούμε για παράδειγμα τι τιμές έχουμε για την εταιρεία Oda
+-- Let's see for example the records which correspond to the company Oda
 
 SELECT *
 FROM layoffs_staging
 WHERE company = "Oda";
 
--- Εδώ βλέπουμε ότι καμμία από τις παρατηρήσεις δεν είναι διπλοεμφανίζομενες. Άρα για να βγάλουμε πραγματικά διπλοεμφανιζόμενες θα πρέπει στο partition να βάλουμε όλες τις στήλες
+-- These observations are not really duplicates. So in order to get real duplicates we have toinclude all the columns in the partition
 
 WITH duplicate_CTE AS(
 
@@ -67,17 +68,17 @@ SELECT *
 FROM duplicate_CTE
 WHERE row_num > 1;
 
--- Ας πάμε να δούμε τι γίνεται στην εταιρεία Casper
+-- Let's see what happens in Casper
 
 SELECT *
 FROM layoffs_staging
 WHERE company = "Casper";
 
--- Από ότι βλέπουμε η πρώτη και η τρίτη παρατήρηση είναι διπλο εμφανιζόμενες
+-- From what we can see only the the first and the third row are real duplicates
 
--- Προσοχή! Εμείς θέλουμε να διώξουμε μια απο αυτές και όχι όλες
+-- Attention! We want to remove only one of them
 
--- Πάμε να διαγράψουμε τις διπλοεμφανιζόμενες
+-- Let's remove the remove the duplicates
 
 WITH duplicate_CTE AS(
 
@@ -92,10 +93,9 @@ DELETE
 FROM duplicate_CTE
 WHERE row_num > 1;
 
--- Μας βγάζει error. Ο λόγος που το βγάζει αυτό είναι επειδή δεν μπορείς να κάνεις update ένα CTE και το να διαγράψεις ένα CTE είναι ένα UPDATE. Οπότε για να πετύχουμε
--- αυτό που θέλουμε θα πρέπει να φτιάξουμε έναν καινούργιο πίνακα με τις μη διπλοεμφανιζόμενες τιμές.
+-- We got an error because we can't update a CTE and deleting is an update. So in order to get what we want we have to create a new table without the duplicates
 
--- Πάμε πρώτα να φτιάξουμε τον καινούργιο πίνακα
+-- Let's create the new table
 
 CREATE TABLE layoffs_staging2 (
 company text,
@@ -129,132 +129,110 @@ funds_raised_millions,
 SELECT *
 FROM layoffs_staging2;
 
--- Τώρα πάμε να επιλέξουμε τα δεδομένα που θέλουμε να αφαιρέσουμε
+-- Let's select the data we want to remove
 
 SELECT *
 FROM layoffs_staging2
 WHERE row_num > 1;
 
--- Ωραία, και τώρα ήρθε η ώρα να τα διαγράψουμε
+-- Let's delete them
 
 DELETE
 FROM layoffs_staging2
 WHERE row_num > 1;
 
--- Ωραία πάμε τώρα να ελένξουμε αν υπάρχει κάποια διπλοεμφανιζόμενη τιμή
+-- Let's check for duplicates
 
 SELECT *
 FROM layoffs_staging2
 WHERE row_num > 1;
 
--- Ας κάνουμε standardize τα δεδομένα
-
--- Κατά αυτή την διαδικασία βρίσκουμε προβλήματα που μπορεί να έχουν τα δεδομένα και τα φτιάχνουμε
+-- Let's standardize the data
 
 SELECT *
 FROM layoffs_staging2;
 
--- Για παράδειγμα βλέπυυμε ότι οι πρώτες δυο παρατηρήσεις στην στήλη company έχουν ένα κενό στην αρχή.
+-- For example we can see that the first two observations in the first column (company) have a space in the beginning
 
--- Πάμε να δούμε όλες τις τιμές που παίρνει η στήλη company
+-- Let's see all the values the column company takes
 
 SELECT DISTINCT(company)
 FROM layoffs_staging2;
 
--- Από ότι βλέπουμε υπάρχουν μόνο δυο εταιρείες στι οποίες θα πρέπει να βγάλουμε το κενό
+-- From what we can see there are two companies in which we should remove the space
 
 SELECT company, TRIM(company)
 FROM layoffs_staging2;
 
--- Πάμε να περάσουμε τις αλλαγές
+-- Let's do the appropriate changes
 
 UPDATE layoffs_staging2
 SET company = TRIM(company);
 
+-- Let's have a look of the dataset
+
 SELECT *
 FROM layoffs_staging2;
 
--- Ας δούμε τι τιμές έχει η στήλη industry
+-- Let's see what values does the industry column have
 
 SELECT DISTINCT(industry)
 FROM layoffs_staging2
-ORDER BY 1; # αυτό σημαίνει ότι τα ταξινομεί με βάση την πρώτη στήλη δηλαδή την industry (αφού αυτήν έχουμε επιλέξει μόνο) και αλφαβητικά (αυτό είναι by default)
+ORDER BY 1;
 
--- Παρατηρήσεις:
+-- 1) We can see that there are null and blank values.
 
--- 1) Βλέπουμε ότι έχουμε NULL τιμές ή Blank.
-
--- 2) Οι τιμές Crypto, Crypto Currency, CryptoCurrency είναι πρακτικά το ίδιο. Αυτό πρέπει να το φτιάξουμε γιατί θα έχουμε θέμα στο EDA αλλά και σε μελλοντικά γραφήματα
+-- 2) The values Crypto, Crypto Currency, CryptoCurrency are basically the same. We should fix this because we may have problems in the future visualizations
 
 UPDATE layoffs_staging2
 SET industry = "Crypto"
-WHERE industry LIKE "Crypto%"; #όπου δηλαδή έχει Crypto blah blah
+WHERE industry LIKE "Crypto%";
 
--- Πάμε να δούμε ότι όντως είναι οκ τώρα
+-- Let's see if we are ok now
 
 SELECT DISTINCT(industry)
 FROM layoffs_staging2;
 
--- Ας δούμε και την στήλη location
+-- Let's see the column location
 
 SELECT DISTINCT(location)
 FROM layoffs_staging2;
 
--- Δεν φαίνεται να έχει κάτι το τρομερό
+-- We don't see any serious problem
 
--- Πάμε να κάνουμε το ίδιο και για την στήλη country
+-- Let's do the same for the country column
 
 SELECT DISTINCT(country)
 FROM layoffs_staging2;
 
--- Βλέπουμε ότι υπάρχει και η τιμή United States αλλά και η τιμή United States. οπότε πάμε να το φτιάξουμε
+-- We can see the values "United States" and "United States." and we should fix this.
 
 UPDATE layoffs_staging2
 SET country = "United States"
 WHERE country LIKE "United States%";
 
--- Επειδή έχουμε ημερομηνίες είναι πολύ πιθανό να θέλουμε να κάνουμε κάποια ανάλυση με χρονοσειρές. Για να το κάνουμε αυτό θα πρέπει η στήλη date να είναι τύπου date και όχι
--- text.
-
--- Υπάρχει εντολή που μας δείχνει τι τύπου δεδομένα περιέχει η κάθε στήλη
+-- Because we have dates it is very possible that we may want to use Time Series. In order to do this we have to make sure that the column date is in date format and not text format
 
 SHOW FIELDS
 FROM layoffs_staging2;
 
--- Βλέπουμε ότι η στήλη date περιέχει δεδομένα τύπου text και καλό θα ήταν να το αλλάξουμε αυτό και να την κάνουμε στήλη με δεδομένα τύπου date
-
--- Για να το κάνουμε αυτό θα χρησιμοποιήσουμε την συνάρτηση STR_TO_DATE()
-
-UPDATE layoffs_staging2
-SET `date` = STR_TO_DATE(`date`, '%m/%d/%Y');
-
--- Πάμε να δούμε πως είναι η στήλη με τις ημερομηνίες
-
-SELECT `date`
-FROM layoffs_staging2;
-
--- Από ότι βλέπουμε υπάρχουν κάποια NULL τα οποία θα τα δούμε αργότερα.
-
-SHOW FIELDS
-FROM layoffs_staging2;
-
--- Βλέπουμε ότι παρόλο που κάναμε ότι κάναμε η στήλη date είναι πάλι τύπου text. Το καλό είναι ότι τώρα μπορούμε να την αλλάξουμε σε date ενώ πριν θα μας έδινε error.
-
--- Εντολές όπως την παρακάτω δεν τις κάνουμε στα raw data
+-- Let's cahnge the fromat of the column date
 
 ALTER TABLE layoffs_staging2
 MODIFY COLUMN `date` DATE;
 
+-- Let's check the format
+
 SHOW FIELDS
 FROM layoffs_staging2;
 
--- Βλέπουμε ότι τώρα άλλαξε ο τύπος σε date
-
--- Πάμε να δούμε τις NULL τιμές. Αυτές εμφανίζονται κυρίως στην στήλη total_laid_off και percentage_laid_off οπότε εκεί θα επικεντρωθούμε κυρίως
+-- Let's see the NULL values. These values mainly occur in the columns total_laid_off and percentage_laid_off so we will focus on these columns.
 
 SELECT *
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL;
+
+-- We can see that in the column total_laid_off has null values but we can see that both columns total_aid_off and percentage_laid_off have null values.
 
 -- Βλέπουμε ότι υπάρχουν NULL τιμές στην στήλη total_laid_off αλλά υπάρχουν και παρατηρήσεις που έχουν NULL τιμές και στην στήλη total_laid_off αλλά
 -- και στην στήλη percentage_laid_off
