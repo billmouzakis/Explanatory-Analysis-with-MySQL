@@ -26,7 +26,7 @@ FROM layoffs;
 
 SELECT *,
 ROW_NUMBER() OVER(
-PARTITION BY company, location, industry, total_laid_off, `date` #βάζουμε έτσι το date γιατί υπάρχει συνάρτηση date
+PARTITION BY company, location, industry, total_laid_off, `date`
 ) AS row_num
 FROM layoffs_staging;
 
@@ -234,107 +234,73 @@ WHERE total_laid_off IS NULL;
 
 -- We can see that in the column total_laid_off has null values but we can see that both columns total_aid_off and percentage_laid_off have null values.
 
--- Βλέπουμε ότι υπάρχουν NULL τιμές στην στήλη total_laid_off αλλά υπάρχουν και παρατηρήσεις που έχουν NULL τιμές και στην στήλη total_laid_off αλλά
--- και στην στήλη percentage_laid_off
-
 SELECT *
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL AND percentage_laid_off IS NULL;
 
--- Πρακτικά, αυτές οι παρατηρήσεις δεν μας είναι και πάρα πολύ χρήσιμες. Αυτές τις παρατηρήσεις πολύ αργότερα θα τις απομακρύνουμε
+-- Basically these observations are not very usefull so we will remove them
 
--- Ας πάμε να δούμε τις τιμές που έχει η στήλη industry
+-- Let's see what values does the column industry have
 
 SELECT DISTINCT(industry)
 FROM layoffs_staging2;
 
--- Βλέπουμε ότι υπάρχουν και blank και null τιμές. Πάμε να τα δούμε στο σύνολο δεδομένων
+-- We can see that there are both blank and null values. Let's see them in the whole dataset
 
 SELECT *
 FROM layoffs_staging2
-WHERE industry IS NULL OR industry = ""; #έτσι περιγράφεται το blank
+WHERE industry IS NULL OR industry = "";
 
--- Καλό είναι αν μπορούμε να γεμίσουμε αυτές τις τιμές που είναι blank. Μπορούμε π.χ να δούμε αν έχει καταγραφεί κάπου αλλού το industry που ανήκει κάποια εταιρεία και
--- να βάλλουμε την τιμή.
+-- It would be beneficial to fill these values which are blank. For example, we can look if the industry of a specific company has been recorded in another row and
+-- fill the corresponding blank values.
 
--- Ας πάρουμε για παράδειγμα την Airbnb
+-- Let's take for example the company Airbnb
 
 SELECT *
 FROM layoffs_staging2
 WHERE company = "Airbnb";
 
--- Άρα βλέπουμε ότι έχει καταγραφεί σε ποιο industry ανήκει η Airbnb. Πάμε λοιπόν να γεμίσουμε το κενό
+-- As we can see the industry which Airbnb belongs is recorded in another observation.
 
 UPDATE layoffs_staging2
 SET industry = "Travel"
 WHERE company = "Airbnb" AND industry = "";
 
--- Πάμε να κάνουμε το ίδιο και για τις άλλες εταιρείες
-
-SELECT *
-FROM layoffs_staging2
-WHERE company = "Bally's Interactive";
-
--- Εδώ δεν μπορούμε να κάνουμε κάτι
-
-SELECT *
-FROM layoffs_staging2
-WHERE company = "Carvana";
-
--- Πάμε να το φτιάξουμε
-
-UPDATE layoffs_staging2
-SET industry = "Transportation"
-WHERE company = "Carvana" AND industry = "";
-
-SELECT *
-FROM layoffs_staging2
-WHERE company = "Juul";
-
--- Πάμε να το φτιάξουμε
-
-UPDATE layoffs_staging2
-SET industry = "Consumer"
-WHERE company = "Juul" AND industry = "";
-
--- Αυτό που κάναμε παραπάνω μπορούμε να το κάνουμε και με λιγότερες γραμμές κώδικα. Δεν είναι μόνο οι λιγότερες γραμμές κωδικα είναι και το ότι αν είχαμε 500 εταιρείες
--- για τις οποίες συνέβαινε το ίδιο πράγμα τότε δεν θα βοήθαγε να κάνουμε αυτό που κάναμε παραπάνω.
-
--- Θα κάνουμε ένα self Join
+-- Let's do the same but for the other companies
 
 SELECT *
 FROM layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
-	ON t1.company = t2.company #εδώ τελειώνει το join και πάμε να μας εμφανίσει αυτό που θέλουμε
+	ON t1.company = t2.company
 WHERE (t1.industry IS NULL OR t1.industry = "") AND t2.industry IS NOT NULL;
 
--- Πάμε να δούμε τις στήλες που μας ενδιαφέρουν
+-- Let's select the columns we want to see
 
 SELECT t1.industry, t2.industry
 FROM layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
-	ON t1.company = t2.company #εδώ τελειώνει το join και πάμε να μας εμφανίσει αυτό που θέλουμε
+	ON t1.company = t2.company
 WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL OR t2.industry != "");
 
--- Πάμε να βάλλουμε τώρα τις τιμές
+-- Let's go and put some values
 
 UPDATE layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
-	ON t1.company = t2.company #εδώ τελειώνει το join και πάμε να μας εμφανίσει αυτό που θέλουμε
+	ON t1.company = t2.company
 SET t1.industry = t2.industry
 WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL OR t2.industry != "");
 
--- Πάμε τώρα να δούμε τώρα τι κάναμε
+-- Let's see what we did
 
 SELECT DISTINCT(industry)
 FROM layoffs_staging2;
 
--- Βλέπουμε ότι πάλι έχουμε κάποια NULL και κάποια Blank. Πάμε να τα δούμε όμως και στο σύνολο των δεδομένων
+-- We can see that we still have some null and blank values
 
 SELECT *
 FROM layoffs_staging2;
 
--- Για να λύσουμε το παραπάνω πρόβλημα θα πρέπει να κάνουμε τις blank τιμές NULL
+-- In order to solve this problem we have to turn blank values into null values
 
 UPDATE layoffs_staging2
 SET industry = NULL
@@ -342,31 +308,30 @@ WHERE industry = "";
 
 UPDATE layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
-	ON t1.company = t2.company #εδώ τελειώνει το join και πάμε να μας εμφανίσει αυτό που θέλουμε
+	ON t1.company = t2.company
 SET t1.industry = t2.industry
 WHERE t1.industry IS NULL AND t2.industry IS NOT NULL;
 
--- Για να δούμε αν μας έχει ξεφύγει κάτι
+-- Let's see what we did
 
 SELECT *
 FROM layoffs_staging2
 WHERE industry IS NULL;
 
--- Πάμε να δούμε αν έχουμε άλλες παρατηρήσεις από αυτή την εταιρεία
+-- Let's see if we have other observations from this company
 
 SELECT *
 FROM layoffs_staging2
 WHERE company = "Bally's Interactive";
 
--- Όχι είναι μόνο μια.
-
--- Πάμε να διαγράψουμε τις παρατηρήσεις που έχουν NULL τιμή και στην στήλη total_laid_off και percentage_laid_off. Αφού δεν μας δίνουν ουσιαστική πληροφορία
+-- We want to occupy ourselves with the lay-offs. For this reason we don't want to have observations which have null values in both total_laid_off and percentage_laid_off
+-- columns. So we will remove them
 
 DELETE
 FROM layoffs_staging2
 WHERE total_laid_off IS NULL AND percentage_laid_off IS NULL;
 
--- Πάμε να διαγράψουμε την στήλη row_num αφού δεν την χρειαζόμαστε
+-- We will delete the column row_num because we don't need it
 
 ALTER TABLE layoffs_staging2
 DROP COLUMN row_num;
@@ -376,74 +341,71 @@ DROP COLUMN row_num;
 SELECT *
 FROM layoffs_staging2;
 
--- Το ποσοστό των απολυμένων υπαλλήλων δεν βοηθάει και τόσο μιας και δεν ξέρουμε το μέγεθος της εταιρείας
+-- The percentage_laid_off doesn't help us very much because we don't know how large the company is.
 
--- Αν περιηγηθούμε λίγο στα δεδομένα θα δούμε ότι σε κάποιες εταιρείες έχουν γίνει απολύσεςι σε παραπάνω από μια μέρα. Οπότε καλό θα ήταν να δούμε πόσα άτομα έχουν απολυθεί
--- συνολικά από κάθε εταιρεία.
+-- If we explore our data we can see that there companies which made layoffs more than one day. So it would be very helpful to see how many people have bee laid-off in total
+-- for every company
 
 SELECT company, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY company;
 
--- Μπορούμε αν θέλουμε να τα ταξινομήσουμε με τέτοιο τρόπο ώστε δούμε ποια εταιρεία είχε τις πιο υψηλές απολύσεις
+-- We can order them to see which company had the most laid-offs
 
 SELECT company, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY company
 ORDER BY 2 DESC;
 
--- Μπορούμε να κάνουμε το ίδιο και για το industry
+-- We can do the same but for the industry
 
 SELECT industry, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY industry
 ORDER BY 2 DESC;
 
--- Μπορούμε να κάνουμε το ίδιο και με την χώρα
+-- We can do the same but based on the country
 
 SELECT country, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY country
 ORDER BY 2 DESC;
 
--- Μπορούμε να βρούμε και το χρονικό περιθώριο των δεδομένων
+-- Let's find the time period of the data
 
 SELECT MIN(`date`), MAX(`date`)
 FROM layoffs_staging2;
 
 -- Άρα βλέπουμε ότι το χρονικό περιθώριο είναι 11/3/2020 έως και 6/3/2023
 
--- Μπορούμε να κάνουμε και αυτό που είδαμε παραπάνω αλλά με την ημερομηνία
+-- We can do the same but based on the date
 
 SELECT `date`, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY `date`
-ORDER BY 1 DESC; # αλλά με βάση την ημερομηνία αυτή την φορά
+ORDER BY 1 DESC;
 
--- Η αλήθεια είναι ότι αυτό δεν βολεύει, οπότε το κάνουμε με βάση το έτος
+-- The truth is that this isn't very helpful. So we will do the same but based on the year
 
 SELECT YEAR(`date`), SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY YEAR(`date`)
 ORDER BY 1 DESC;
 
--- Μπορούμε να το κάνουμε έτσι ώστε να έχουμε και τον μήνα και το έτος (δεν έχει νόημα να βλέπουμε μόνο τον μήνα)
+-- We can do the same but based on the specific month of the year
 
 SELECT SUBSTRING(`date`,1,7) AS month_and_year, SUM(total_laid_off)
 FROM layoffs_staging2
 GROUP BY month_and_year;
 
--- Βλέπουμε ότι υπάρχει μια γραμμή που περιέχει NULL στην πρώτη στήλη οπότε την βγάζουμε
+-- We will get the part of the data that doesn't have any null value in the date column
 
 SELECT SUBSTRING(`date`,1,7) AS month_and_year, SUM(total_laid_off)
 FROM layoffs_staging2
-WHERE SUBSTRING(`date`,1,7) IS NOT NULL #θα θέλαμε πάρα πολύ να μπορούμε να βάλλουμε `month_and_year` αλλά δεν γίνεται επειδή το where clause γίνεται πρώτα και μετά το SELECT
-#οπότε δεν το καταλαβαίνει
+WHERE SUBSTRING(`date`,1,7) IS NOT NULL
 GROUP BY month_and_year;
 
--- Μπορούμε να πάμε ένα βήμα παραπάνω τον παραπάνω κώδικα και να φτιάξουμε ένα cummulative sum με τις απολύσεις που έγιναν.
-
--- Θα φτιάξουμε και μια στήλη που θα δείχνει κάθε φορά το ποσό που προστέθηκε στο τρέχον άθροισμα
+-- We can calculate the cumulative sum of the total lay-offs
 
 WITH total_laid_off_per_time AS
 (
@@ -457,15 +419,11 @@ SELECT month_and_year, sum_t,
 		SUM(sum_t) OVER (ORDER BY month_and_year ASC) AS Cummulative_sum
 FROM total_laid_off_per_time;
 
--- Μπορούμε να δούμε ότι στο τέλος του 2020 είχαμε συνολικά γύρω στις 81.000 απολύσεις ενώ στο τέλος του 2021 είχαμε γύρω στα 96k. Από ότι βλέπουμε το 2021 ήταν καλύτερη χρονιά
--- μιας και η αύξηση είναι πολύ μικρότερη από αυτή που είδαμε στο 2020. Επίσης, μπορούμε να δούμε ότι στο τέλος του 2022 είχαμε γύρω στις 260k απολύσεις, το οποίο σημαίνει
--- ότι η χρονιά αυτή ήταν πολύ χειρότερη σε σύγκριση με το 2021.
+-- We can see that in the end of the year 2020 we had around 81k layoffs although in the end of the year 2021 we had around 96k. As we can see the year 2021 was better
+-- because the increasement was way lower than the year 2020. Also, we can see that in the end of the year 2022 we had around 260k lay-offs which means that this year
+-- was worse than the year 2021.
 
--- Αν θέλουμε να το κάνουμε αυτό αλλά για κάθε χώρα
-
--- Πάμε να δούμε τον κώδικα βήμα-βήμα
-
--- Θα φτιάξουμε τον κώδικα που θα υπολογίζει τον συνολικό αριθμό απολύσεων ανά μήνα σε κάθε χώρα
+-- Let's do the same but for the country
 
 WITH SUM2 AS(
 SELECT country,
@@ -473,16 +431,13 @@ SELECT country,
     SUM(total_laid_off) AS SUM1
 FROM layoffs_staging2
 WHERE SUBSTRING(`date`,1,7) IS NOT NULL
-GROUP BY country, month_and_year #εδώ ουσιαστικά φτιάχνουμε ομάδες με βάση την χώρα και την ημερομηνία (σκέψου ότι έχουμε πολλές παρατηρήσεις με την ίδια χώρα
-#αλλά άλλη ημερομηνία. Οπότε θέλουμε να αθροίσουμε όλες τις παρατηρήσεις που αντιστιχούν στην ίδια χώρα και το μόνο που αλλάζει είναι η ημερομηνία
+GROUP BY country, month_and_year
 )
 SELECT country, month_and_year, SUM1,
-SUM(SUM1) OVER (PARTITION BY country ORDER BY month_and_year ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Cummulative_sum #στο Partition δεν βάλλαμε την
-#ημερομηνία γιατί θέλουμε το άθροισμα να αλλάζει μόνο με βάση την χώρα. Επίσης βάλλαμε το άλλο για ασφάλεια. Αν ταξινομούσαμε τα δεδομένα με βάση αριθμητικά δεδομένα
-#ή με βάση μοναδικές τιμές τότε δεν θα χρειαζόταν.
+SUM(SUM1) OVER (PARTITION BY country ORDER BY month_and_year ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Cummulative_sum
 FROM SUM2;
 
--- Πάμε να δούμε ποιες εταιρείες είχαν τις περισσότερες απολύσεις ανά έτος
+-- Let's see which companies had the most lay-offs every year
 
 WITH cte_1 AS(
 SELECT company, YEAR(`date`) AS years,
@@ -490,12 +445,13 @@ SUM(total_laid_off) AS SUM1
 FROM layoffs_staging2
 WHERE total_laid_off IS NOT NULL AND YEAR(`date`) IS NOT NULL
 GROUP BY company, years
-)# με αυτό μπορούμε και υπολογίζουμε τις συνολικές απολύσεις ανά έτος
+)
 SELECT company, years, sum1,
 DENSE_RANK() OVER (PARTITION BY years ORDER BY SUM1 DESC) AS Ranking
 FROM cte_1
 ORDER BY years ASC;
 
+-- Let's rank every country based on the total lay-offs in every year
 
 WITH cte_1 AS(
 SELECT company, YEAR(`date`) AS years,
@@ -503,14 +459,13 @@ SUM(total_laid_off) AS SUM1
 FROM layoffs_staging2
 WHERE YEAR(`date`) IS NOT NULL
 GROUP BY company, years
-)# με αυτό μπορούμε και υπολογίζουμε τις συνολικές απολύσεις ανά έτος
+)
 SELECT company, years, SUM1,
 DENSE_RANK() OVER (PARTITION BY years ORDER BY SUM1 DESC) AS Ranking
-#Με την παραπάνω εντολή ουσιαστικά φτιάχνουμε "ομάδες" με βάση το έτος και κάνουμε ranking μέσα στην ομάδα με βάση τις συνολικές απολύσεις
 FROM cte_1
-ORDER BY Ranking ASC; #αυτό το χρειαζόμαστε γιατί έτσι μπορούμε να δούμε ανά έτος ποια ήταν πρώτη, μετά ανα έτος ποια ήταν δεύτερη κ.ο.κ
+ORDER BY Ranking ASC;
 
--- Θέλουμε σε κάθε έτος να έχουμε τις top 5 σε συνολικές απολύσεις
+-- Let's see the top five companies based of the total lay-offs for every year
 
 WITH cte_1 AS(
 SELECT company, YEAR(`date`) AS years,
@@ -518,21 +473,16 @@ SUM(total_laid_off) AS SUM1
 FROM layoffs_staging2
 WHERE YEAR(`date`) IS NOT NULL
 GROUP BY company, years
-),#Εδώ υπολογίζουμε τις συνολικές απολύσεις ανά έτος
+),
 ranking_companies AS(
 SELECT company, years, SUM1,
 DENSE_RANK() OVER (PARTITION BY years ORDER BY SUM1 DESC) AS Ranking
 FROM cte_1
-) #εδώ βάζουμε ένα ακόμη CTE
+)
 SELECT *
 FROM ranking_companies
 WHERE Ranking <= 5
 ;
-
-#Εδώ το κάναμε έτσι γιατί δεν μπορούμε να βάλουμε το WHERE ούτε μετά το ORDER BY ούτε πριν από αυτό. Δεν μπορούμε να το βάλλουμε το WHERE πριν από το ORDER BY γιατί
-#δεν μπορούμε να χρησιμοποιηθεί το Ranking ενώ δεν έχει φτιαχτεί. Αυτό συμβαίνει γιατί πρώτα εκτελείται το WHERE και μετά η εντολή DENSE_RANK() OVER (PARTITION BY
-#years ORDER BY SUM1 DESC) AS Ranking
-
 
 
 
