@@ -434,7 +434,7 @@ WHERE SUBSTRING(`date`,1,7) IS NOT NULL
 GROUP BY country, month_and_year
 )
 SELECT country, month_and_year, SUM1,
-SUM(SUM1) OVER (PARTITION BY country ORDER BY month_and_year ASC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS Cummulative_sum
+SUM(SUM1) OVER (PARTITION BY country ORDER BY month_and_year ASC) AS Cummulative_sum
 FROM SUM2;
 
 -- Let's see which companies had the most lay-offs every year
