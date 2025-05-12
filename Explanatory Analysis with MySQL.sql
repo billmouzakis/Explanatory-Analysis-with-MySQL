@@ -272,7 +272,7 @@ SELECT *
 FROM layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
 	ON t1.company = t2.company
-WHERE (t1.industry IS NULL OR t1.industry = "") AND t2.industry IS NOT NULL;
+WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL AND t2.industry != "");
 
 -- Let's select the columns we want to see
 
@@ -280,7 +280,7 @@ SELECT t1.industry, t2.industry
 FROM layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
 	ON t1.company = t2.company
-WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL OR t2.industry != "");
+WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL AND t2.industry != "");
 
 -- Let's go and put some values
 
@@ -288,7 +288,7 @@ UPDATE layoffs_staging2 AS t1
 JOIN layoffs_staging2 AS t2
 	ON t1.company = t2.company
 SET t1.industry = t2.industry
-WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL OR t2.industry != "");
+WHERE (t1.industry IS NULL OR t1.industry = "") AND (t2.industry IS NOT NULL AND t2.industry != "");
 
 -- Let's see what we did
 
